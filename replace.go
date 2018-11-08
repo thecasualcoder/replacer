@@ -38,10 +38,12 @@ func LoadFromFile(r io.Reader) (Replacer, error) {
 // If a match is found in patterns, it replaces it with the value
 // It also provides a bool, indicating if a change was done
 func (r *Replacer) Replace(source string) (string, bool) {
+	var changed bool
 	for key, value := range r.patterns {
 		if strings.Contains(source, key) {
-			return strings.Replace(source, key, value, -1), true
+			source = strings.Replace(source, key, value, -1)
+			changed = true
 		}
 	}
-	return source, false
+	return source, changed
 }

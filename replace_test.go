@@ -50,4 +50,9 @@ func TestReplace(t *testing.T) {
 
 	assert.False(t, changed)
 	assert.Equal(t, "This need not be changed", result)
+
+	result, changed = r.Replace("This is pattern-1 and this is pattern-2")
+
+	assert.True(t, changed)
+	assert.Equal(t, "This is value-1 and this is value-2", result)
 }
