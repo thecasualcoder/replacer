@@ -38,7 +38,7 @@ ifeq ($(RICHGO),)
 endif
 
 test: ensure-build-dir ## Run tests
-	GO111MODULE=on ENVIRONMENT=test $(GOBIN) test $(SRC_PACKAGES) -p=1 -coverprofile ./out/coverage -short -v
+	GO111MODULE=auto ENVIRONMENT=test $(GOBIN) test $(SRC_PACKAGES) -p=1 -coverprofile ./out/coverage -short -v
 
 test-cover-html: ## Run tests with coverage
 	mkdir -p ./out
