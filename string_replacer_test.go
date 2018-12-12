@@ -12,8 +12,10 @@ func TestLoadStringReplacerFromFile(t *testing.T) {
 
 	t.Run("should load patterns", func(t *testing.T) {
 		filecontents := `{
-		"pattern-1": "value-1",
-		"pattern-2": "value-2"
+		"patterns": {
+			"pattern-1": "value-1",
+			"pattern-2": "value-2"
+		}
 }`
 		reader := strings.NewReader(filecontents)
 

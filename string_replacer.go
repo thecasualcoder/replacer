@@ -20,18 +20,20 @@ func NewStringReplacer(p map[string]string) Replacer {
 // LoadStringReplacerFromFile loads a map from a Reader
 // The contents should be of the format
 // {
-//		"pattern-1": "replace-value-1",
-//		"pattern-2": "replace-value-2"
+//		"patterns": {
+//			"pattern-1": "replace-value-1",
+//			"pattern-2": "replace-value-2"
+//		}
 // }
 func LoadStringReplacerFromFile(r io.Reader) (Replacer, error) {
-	var p map[string]string
+	replacer := StringReplacer{}
 
-	err := json.NewDecoder(r).Decode(&p)
+	err := json.NewDecoder(r).Decode(&replacer)
 	if err != nil {
-		return StringReplacer{}, fmt.Errorf("Error loading from file: %v", err)
+		return nil, fmt.Errorf("Error loading from file: %v", err)
 	}
 
-	return NewStringReplacer(p), nil
+	return replacer, nil
 }
 
 // Replace uses the patters configured in the replacer and accepts a string
