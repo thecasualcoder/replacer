@@ -10,14 +10,14 @@ import (
 
 // StructReplacer is the struct that holds the patterns for find and replace
 type StructReplacer struct {
-	KeyField   string
-	ValueField string
-	Patterns   map[string]string
+	MatchWith   string
+	ReplaceWith string
+	Patterns    map[string]string
 }
 
 // NewStructReplacer function creats and returns MapReplacer
-func NewStructReplacer(keyField string, valueField string, patterns map[string]string) Replacer {
-	return StructReplacer{KeyField: keyField, ValueField: valueField, Patterns: patterns}
+func NewStructReplacer(matchWith string, replaceWith string, patterns map[string]string) Replacer {
+	return StructReplacer{MatchWith: matchWith, ReplaceWith: replaceWith, Patterns: patterns}
 }
 
 // LoadStructReplacerFromFile load a map from a Reader
@@ -43,13 +43,13 @@ func (r StructReplacer) replaceStruct(source interface{}) (interface{}, bool) {
 	srcValue := reflect.ValueOf(source)
 	var changed bool
 	v := srcValue.Elem()
-	mf := v.FieldByName(r.KeyField)
-	rf := v.FieldByName(r.ValueField)
+	mf := v.FieldByName(r.MatchWith)
+	rf := v.FieldByName(r.ReplaceWith)
 
 	if mf.IsValid() && mf.Kind() == reflect.String && rf.IsValid() && rf.CanSet() && rf.Kind() == reflect.String {
 		for key, value := range r.Patterns {
 			if strings.Contains(mf.String(), key) {
-				if r.KeyField == r.ValueField {
+				if r.MatchWith == r.ReplaceWith {
 					value = strings.Replace(rf.String(), key, value, -1)
 				}
 				rf.SetString(value)

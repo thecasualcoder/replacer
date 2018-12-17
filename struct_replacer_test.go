@@ -12,8 +12,8 @@ func TestLoadStructReplacerFromFile(t *testing.T) {
 
 	t.Run("should load pattern from file content", func(t *testing.T) {
 		filecontents := `{
-		"keyField": "key",
-		"valueField": "values",
+		"matchWith": "key",
+		"replaceWith": "values",
 		"patterns": {
 			"pattern-1": "value-1",
 			"pattern-2": "value-2"
@@ -31,8 +31,8 @@ func TestLoadStructReplacerFromFile(t *testing.T) {
 		assert.NotNil(t, r)
 		assert.True(t, ok)
 		assert.NotNil(t, re)
-		assert.Equal(t, "key", re.KeyField)
-		assert.Equal(t, "values", re.ValueField)
+		assert.Equal(t, "key", re.MatchWith)
+		assert.Equal(t, "values", re.ReplaceWith)
 		assert.Equal(t, expected, re.Patterns)
 	})
 
@@ -57,8 +57,8 @@ func TestNewStructReplacer(t *testing.T) {
 		assert.NotNil(t, r)
 		assert.True(t, ok)
 		assert.NotNil(t, re)
-		assert.Equal(t, "name", re.KeyField)
-		assert.Equal(t, "value", re.ValueField)
+		assert.Equal(t, "name", re.MatchWith)
+		assert.Equal(t, "value", re.ReplaceWith)
 		assert.Equal(t, patterns, re.Patterns)
 	})
 }
