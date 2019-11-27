@@ -64,46 +64,144 @@ func TestNewStructReplacer(t *testing.T) {
 }
 
 func TestStructReplace(t *testing.T) {
-	type example struct {
+	type entry struct {
 		Name  string
 		Value string
 	}
 
-	t.Run("should completely replace value FieldKey is different from FieldValue and pattern matches", func(t *testing.T) {
-		patterns := map[string]string{"pattern": "replaced value"}
-		r := replacer.NewStructReplacer("Name", "Value", patterns)
-		source := example{Name: "This is pattern-1", Value: "value-1"}
+	t.Run("When KeyField is different from ValueField", func(t *testing.T) {
+		t.Run("should completely replace ValueField if pattern matches in KeyField", func(t *testing.T) {
+			patterns := map[string]string{"pattern": "replaced value"}
+			r := replacer.NewStructReplacer("Name", "Value", patterns)
+			source := entry{Name: "pattern", Value: "value-1"}
 
-		re, changed := r.Replace(&source)
-		result, ok := re.(*example)
+			re, changed := r.Replace(&source)
+			result, ok := re.(*entry)
 
-		assert.NotNil(t, re)
-		assert.True(t, changed)
-		assert.True(t, ok)
-		assert.Equal(t, "replaced value", result.Value)
+			assert.NotNil(t, re)
+			assert.True(t, changed)
+			assert.True(t, ok)
+			assert.Equal(t, "replaced value", result.Value)
+		})
+
+		t.Run("should completely replace ValueField if pattern partially matches in KeyField", func(t *testing.T) {
+			patterns := map[string]string{"pattern": "replaced value"}
+			r := replacer.NewStructReplacer("Name", "Value", patterns)
+			source := entry{Name: "This is pattern-1", Value: "value-1"}
+
+			re, changed := r.Replace(&source)
+			result, ok := re.(*entry)
+
+			assert.NotNil(t, re)
+			assert.True(t, changed)
+			assert.True(t, ok)
+			assert.Equal(t, "replaced value", result.Value)
+		})
+
+		t.Run("should not replace ValueField if pattern does not match KeyField", func(t *testing.T) {
+			patterns := map[string]string{"pattern": "replaced value"}
+			r := replacer.NewStructReplacer("Name", "Value", patterns)
+			source := entry{Name: "This is some key", Value: "value-1"}
+
+			re, changed := r.Replace(&source)
+			result, ok := re.(*entry)
+
+			assert.NotNil(t, re)
+			assert.False(t, changed)
+			assert.True(t, ok)
+			assert.Equal(t, "value-1", result.Value)
+		})
 	})
 
-	t.Run("should do pattern based replace if KeyField is different from ValueField and pattern matches", func(t *testing.T) {
-		patterns := map[string]string{"pattern": "replaced value"}
-		r := replacer.NewStructReplacer("Value", "Value", patterns)
-		source := example{Name: "name", Value: "This is pattern-1"}
+	t.Run("When KeyField and ValueField are same", func(t *testing.T) {
+		t.Run("should replace value based on pattern matches", func(t *testing.T) {
+			type config struct {
+				Key   string
+				Value string
+			}
+			type testCase struct {
+				name          string
+				input         config
+				patterns      map[string]string
+				expectedValue string
+				isChanged     bool
+			}
 
-		re, changed := r.Replace(&source)
-		result, ok := re.(*example)
+			testCases := []testCase{
+				{
+					name: "Matches with .* pattern",
+					input: config{
+						Key:   "Key-1",
+						Value: "This is value.*",
+					},
+					patterns:      map[string]string{"value.*": "replaced value"},
+					expectedValue: "This is replaced value",
+					isChanged:     true,
+				},
+				{
+					name: "Matches with .* pattern",
+					input: config{
+						Key:   "Key-1",
+						Value: "This is value-1",
+					},
+					patterns:      map[string]string{"value.*": "replaced value"},
+					expectedValue: "This is replaced value",
+					isChanged:     true,
+				},
+				{
+					name: ".default pattern",
+					input: config{
+						Key:   "Key-1",
+						Value: "test.default",
+					},
+					patterns:      map[string]string{"test(.default)?$": "test-default.service"},
+					expectedValue: "test-default.service",
+					isChanged:     true,
+				},
+				{
+					name: "simple service name match pattern",
+					input: config{
+						Key:   "Key-1",
+						Value: "test",
+					},
+					patterns:      map[string]string{"test(.default)?$": "test-default.service"},
+					expectedValue: "test-default.service",
+					isChanged:     true,
+				},
+				{
+					name: "No pattern match",
+					input: config{
+						Key:   "Key-1",
+						Value: "test-db-core",
+					},
+					patterns:      map[string]string{"value.*": "replaced value", "test(.default)?$": "test-default.service"},
+					expectedValue: "test-db-core",
+					isChanged:     false,
+				},
+			}
 
-		assert.NotNil(t, re)
-		assert.True(t, changed)
-		assert.True(t, ok)
-		assert.Equal(t, "This is replaced value-1", result.Value)
+			for _, test := range testCases {
+				r := replacer.NewStructReplacer("Value", "Value", test.patterns)
+
+				re, changed := r.Replace(&test.input)
+
+				assert.NotNil(t, re, test.name)
+				assert.Equal(t, test.isChanged, changed, test.name)
+
+				result, ok := re.(*config)
+				assert.True(t, ok, test.name)
+				assert.Equal(t, test.expectedValue, result.Value, test.name)
+			}
+		})
 	})
 
-	t.Run("should not replace if the value source is not ptr", func(t *testing.T) {
+	t.Run("should not replace if the given input is not a pointer", func(t *testing.T) {
 		patterns := map[string]string{"pattern": "replaced value"}
 		r := replacer.NewStructReplacer("Value", "Value", patterns)
-		source := example{Name: "name", Value: "This is pattern-1"}
+		source := entry{Name: "name", Value: "This is pattern-1"}
 
 		re, changed := r.Replace(source)
-		result, ok := re.(example)
+		result, ok := re.(entry)
 
 		assert.NotNil(t, re)
 		assert.False(t, changed)
@@ -111,13 +209,13 @@ func TestStructReplace(t *testing.T) {
 		assert.Equal(t, "This is pattern-1", result.Value)
 	})
 
-	t.Run("should not replace if the keyField doesn't match", func(t *testing.T) {
+	t.Run("should not replace if the keyField doesn't match/exist", func(t *testing.T) {
 		patterns := map[string]string{"pattern": "replaced value"}
-		r := replacer.NewStructReplacer("Name", "Value", patterns)
-		source := example{Name: "key", Value: "value-1"}
+		r := replacer.NewStructReplacer("DifferentKeyNotName", "Value", patterns)
+		source := entry{Name: "pattern", Value: "value-1"}
 
 		re, changed := r.Replace(&source)
-		result, ok := re.(*example)
+		result, ok := re.(*entry)
 
 		assert.NotNil(t, re)
 		assert.False(t, changed)
@@ -125,41 +223,13 @@ func TestStructReplace(t *testing.T) {
 		assert.Equal(t, "value-1", result.Value)
 	})
 
-	t.Run("should not replace if the keyField doesn't exist", func(t *testing.T) {
+	t.Run("should not replace if the valueField doesn't match/exist", func(t *testing.T) {
 		patterns := map[string]string{"pattern": "replaced value"}
-		r := replacer.NewStructReplacer("Key", "Value", patterns)
-		source := example{Name: "This is pattern-1", Value: "value-1"}
+		r := replacer.NewStructReplacer("Name", "DifferentNotValue", patterns)
+		source := entry{Name: "pattern", Value: "value-1"}
 
 		re, changed := r.Replace(&source)
-		result, ok := re.(*example)
-
-		assert.NotNil(t, re)
-		assert.False(t, changed)
-		assert.True(t, ok)
-		assert.Equal(t, "value-1", result.Value)
-	})
-
-	t.Run("should not replace if the valueField doesn't match", func(t *testing.T) {
-		patterns := map[string]string{"pattern": "replaced value"}
-		r := replacer.NewStructReplacer("Value", "Value", patterns)
-		source := example{Name: "key", Value: "value-1"}
-
-		re, changed := r.Replace(&source)
-		result, ok := re.(*example)
-
-		assert.NotNil(t, re)
-		assert.False(t, changed)
-		assert.True(t, ok)
-		assert.Equal(t, "value-1", result.Value)
-	})
-
-	t.Run("should not replace if the valueField doesn't exist", func(t *testing.T) {
-		patterns := map[string]string{"pattern": "replaced value"}
-		r := replacer.NewStructReplacer("Name", "Age", patterns)
-		source := example{Name: "This is pattern-1", Value: "value-1"}
-
-		re, changed := r.Replace(&source)
-		result, ok := re.(*example)
+		result, ok := re.(*entry)
 
 		assert.NotNil(t, re)
 		assert.False(t, changed)
@@ -170,14 +240,14 @@ func TestStructReplace(t *testing.T) {
 	t.Run("should not replace []items", func(t *testing.T) {
 		patterns := map[string]string{"pattern": "replaced value"}
 		r := replacer.NewStructReplacer("Name", "Value", patterns)
-		source := []example{{Name: "This is pattern-1", Value: "value-1"}}
+		source := []entry{{Name: "This is pattern-1", Value: "value-1"}}
 
 		re, changed := r.Replace(&source)
-		result, ok := re.(*[]example)
+		result, ok := re.(*[]entry)
 
 		assert.NotNil(t, re)
 		assert.False(t, changed)
 		assert.True(t, ok)
-		assert.Equal(t, example{Name: "This is pattern-1", Value: "value-1"}, (*result)[0])
+		assert.Equal(t, entry{Name: "This is pattern-1", Value: "value-1"}, (*result)[0])
 	})
 }

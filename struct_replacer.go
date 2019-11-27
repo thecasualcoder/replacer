@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"strings"
+	"regexp"
 )
 
 // StructReplacer is the struct that holds the patterns for find and replace
@@ -40,19 +40,25 @@ func LoadStructReplacerFromFile(r io.Reader) (Replacer, error) {
 }
 
 func (r StructReplacer) replaceStruct(source interface{}) (interface{}, bool) {
-	srcValue := reflect.ValueOf(source)
 	var changed bool
+	srcValue := reflect.ValueOf(source)
 	v := srcValue.Elem()
-	mf := v.FieldByName(r.MatchWith)
-	rf := v.FieldByName(r.ReplaceWith)
+	matchField := v.FieldByName(r.MatchWith)
+	replaceField := v.FieldByName(r.ReplaceWith)
 
-	if mf.IsValid() && mf.Kind() == reflect.String && rf.IsValid() && rf.CanSet() && rf.Kind() == reflect.String {
-		for key, value := range r.Patterns {
-			if strings.Contains(mf.String(), key) {
+	if matchField.IsValid() &&
+		matchField.Kind() == reflect.String &&
+		replaceField.IsValid() &&
+		replaceField.CanSet() &&
+		replaceField.Kind() == reflect.String {
+		for regexPattern, toBeReplacedWith := range r.Patterns {
+			var re = regexp.MustCompile(regexPattern)
+			finalValue := toBeReplacedWith
+			if re.MatchString(matchField.String()) {
 				if r.MatchWith == r.ReplaceWith {
-					value = strings.Replace(rf.String(), key, value, -1)
+					finalValue = re.ReplaceAllString(replaceField.String(), toBeReplacedWith)
 				}
-				rf.SetString(value)
+				replaceField.SetString(finalValue)
 				changed = true
 			}
 		}
