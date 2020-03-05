@@ -1,5 +1,7 @@
 module github.com/thecasualcoder/replacer
 
+go 1.14
+
 require (
 	9fans.net/go v0.0.0-20181112161441-237454027057 // indirect
 	github.com/alecthomas/gometalinter v2.0.11+incompatible // indirect
